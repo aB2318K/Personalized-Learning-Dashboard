@@ -1,0 +1,16 @@
+@keyframes type {
+    0% {
+      width: 0;
+    }
+    100% {
+      width: 100%;
+    }
+}
+
+.animated-text {
+    display: inline-block;
+    overflow: hidden; 
+    white-space: nowrap;
+    width: 0; 
+    animation: type 4s steps(30) 1s forwards; 
+  }
