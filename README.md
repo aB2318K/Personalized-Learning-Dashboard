@@ -64,5 +64,3 @@ Unlock your full learning potential with the **Personalized Learning Dashboard**
 - Empower users to achieve their learning goals efficiently.
 - Provide tailored resources and insights for the tech industry.
 - Foster a collaborative community of learners.
-
-<video src="video.mp4" controls width="600"></video>
