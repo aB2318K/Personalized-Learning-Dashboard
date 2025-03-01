@@ -60,8 +60,8 @@ function EditProfile({ userId, token }) {
     }, [tempFirstName, tempLastName, firstName, lastName]);
 
     const passwordValidator = () => {
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-        if (!passwordRegex.test(newPassword)) {
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
+        if (!passwordRegex.test(password)) {
             setPasswordError(
                 '*Your password must be at least 8 characters long and include one uppercase letter, one lowercase letter, one number, and one special character'
             );

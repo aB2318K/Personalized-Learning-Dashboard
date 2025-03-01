@@ -43,7 +43,7 @@ function SignUp() {
         setPasswordError('');
         return true;
     }
-};
+  };
 
   const handleSubmission = async (event) => {
     event.preventDefault();
