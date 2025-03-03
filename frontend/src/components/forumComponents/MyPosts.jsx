@@ -259,7 +259,7 @@ const MyPosts = ({ userId, token }) => {
             <button
               onClick={handleCreatePost}
               disabled={!questionTitle.trim() || !questionDescription.trim()}
-              className={`createBtn text-sm: md:text-base px-2 py-1 rounded-md text-white ${
+              className={`createBtn text-sm: md:text-base px-2 py-1 md:px-4 md:py-2 rounded-md text-white ${
                 !questionTitle.trim() || !questionDescription.trim()
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500'
