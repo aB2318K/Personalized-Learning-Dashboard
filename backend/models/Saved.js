@@ -1,6 +1,6 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
-const savedModel = new mongoose.Schema({
+const savedSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     data: { type: Object, required: true },
     category: { type: String, required: true },
@@ -8,4 +8,6 @@ const savedModel = new mongoose.Schema({
     savedAt: { type: Date, default: Date.now },
 });
 
-module.exports = mongoose.model('Saved', savedModel);
+const Saved = mongoose.model('Saved', savedSchema);
+
+export default Saved;

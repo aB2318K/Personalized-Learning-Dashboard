@@ -1,6 +1,6 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
-const taskModel = new mongoose.Schema(
+const taskSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     dueDate: { type: Date, required: true },
@@ -11,4 +11,6 @@ const taskModel = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model('Task', taskModel);
+const Task = mongoose.model('Task', taskSchema);
+
+export default Task;

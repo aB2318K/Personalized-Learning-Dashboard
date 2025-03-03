@@ -1,6 +1,6 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
-const goalModel = new mongoose.Schema(
+const goalSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },      
     dueDate: { type: Date, required: true },    
@@ -12,4 +12,6 @@ const goalModel = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model('Goal', goalModel);
+const Goal = mongoose.model('Goal', goalSchema);
+
+export default Goal;

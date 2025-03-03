@@ -1,10 +1,12 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
-const historyModel = new mongoose.Schema({
+const historySchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     data: { type: Object, required: true }, 
     category: { type: String, required: true },
     viewedAt: { type: Date, default: Date.now }, 
 });
 
-module.exports = mongoose.model('History', historyModel);
+const History = mongoose.model('History', historySchema);
+
+export default History;

@@ -1,10 +1,12 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
-const postModel = new mongoose.Schema({
+const postSchema = new mongoose.Schema({
     title: { type: String, required: true },
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Reference to the User model
     description: { type: String, required: true },
     answersCount: { type: Number, default: 0 },
 }, { timestamps: true }); // Automatically manages createdAt and updatedAt
 
-module.exports = mongoose.model('Post', postModel);
+const Post = mongoose.model('Post', postSchema);
+
+export default Post;

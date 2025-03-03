@@ -1,6 +1,6 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
-const notificationModel = new mongoose.Schema({
+const notificationSchema = new mongoose.Schema({
     type: { type: String, enum: ['question', 'answer'], required: true },
     postId: { type: mongoose.Schema.Types.ObjectId, required: true }, 
     answerId: { type: mongoose.Schema.Types.ObjectId, ref: 'PostAnswer' }, 
@@ -8,4 +8,6 @@ const notificationModel = new mongoose.Schema({
     recipients: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 }, { timestamps: true });
 
-module.exports = mongoose.model('Notification', notificationModel);
+const Notification = mongoose.model('Notification', notificationSchema);
+
+export default Notification;
