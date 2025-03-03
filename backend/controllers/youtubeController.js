@@ -1,5 +1,4 @@
 import { HfInference } from '@huggingface/inference';
-import fetch from 'node-fetch';
 import Saved from '../models/Saved.js';
 import Goal from '../models/Goal.js';
 
