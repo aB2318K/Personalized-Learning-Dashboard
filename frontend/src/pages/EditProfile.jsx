@@ -234,7 +234,7 @@ function EditProfile({ userId, token }) {
                     placeholder="Confirm new password"
                     className="mt-1 w-full px-3 py-2 md:px-4 md:py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
                 />
-                {matchError && <p className="text-red-600 text-sm mt-2">{matchError}</p>}
+                {matchError && <p className="mt-1 error_message text-red-700 text-[10px]">{matchError}</p>}
                 {successMessage && (
                     <p className="text-center bg-gray-100 text-gray-700 mt-4 py-2 px-4 rounded-lg">
                         {successMessage}
@@ -242,7 +242,7 @@ function EditProfile({ userId, token }) {
                 )}
                 <div className="flex justify-end mt-4">
                     <button
-                        onClick={() => {setPasswordModalOpened(false); setCurrentPasswordError(""); setMatchError(""); setPasswordError("")}}
+                        onClick={() => {setPasswordModalOpened(false); setCurrentPasswordError(""); setMatchError(""); setPasswordError(""); setPassword(""); setNewPassword(""); setRePassword("")}}
                         className="bg-gray-600 text-white text-sm md:text-base px-2 py-1 md:px-4 md:py-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 mr-2">
                         Cancel
                     </button>
