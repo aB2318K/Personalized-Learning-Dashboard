@@ -55,32 +55,44 @@ export const updateUser = async (req, res) => {
 };
 
 export const changePassword = async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { currentPassword, newPassword } = req.body;
+    try {
+        const { userId } = req.params;
+        const { currentPassword, newPassword } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ message: 'Invalid user ID.' });
+        // Validate the user ID
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: 'Invalid user ID.' });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        // Check if current password is correct
+        const isPasswordValid = await comparePasswords(currentPassword, user.password);
+        if (!isPasswordValid) {
+            return res.status(401).json({ message: '*Invalid password.' });
+        }
+
+        // Check if new password is different from the current password
+        const isSamePassword = await comparePasswords(newPassword, user.password);
+        if (isSamePassword) {
+            return res.status(400).json({ sameMessage: '*New password must be different from the current password.' });
+        }
+
+        // Hash the new password and update
+        const hashedPassword = await hashPassword(newPassword);
+        user.password = hashedPassword;
+
+        // Save the updated user
+        await user.save();
+
+        res.status(200).json({ message: 'Password updated successfully.' });
+    } catch (error) {
+        console.error('Error updating password:', error);
+        return res.status(500).json({ message: 'Server error.', error: error.message });
     }
-
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: 'User not found.' });
-
-    if (!(await comparePasswords(currentPassword, user.password))) {
-      return res.status(401).json({ message: 'Invalid password.' });
-    }
-
-    if (await comparePasswords(newPassword, user.password)) {
-      return res.status(400).json({ message: 'New password must be different.' });
-    }
-
-    user.password = await hashPassword(newPassword);
-    await user.save();
-    res.status(200).json({ message: 'Password updated successfully.' });
-  } catch (error) {
-    console.error('Error changing password:', error);
-    return res.status(500).json({ message: 'Server error.', error: error.message });
-  }
 };
 
 export const deleteUser = async (req, res) => {

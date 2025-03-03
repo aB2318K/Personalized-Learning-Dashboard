@@ -5,84 +5,108 @@ import User from '../models/User.js';
 import { hashPassword, comparePasswords } from '../utils/helpers.js';
 
 export const requestPasswordReset = async (req, res) => {
-  try {
     const { email } = req.body;
-    const user = await User.findOne({ email });
-    
-    if (!user) return res.status(404).json({ message: 'User not found.' });
+    try {
+        const existingUser = await User.findOne({ email });
 
-    const resetToken = jwt.sign(
-      { id: user.id },
-      process.env.JWT_RESET_SECRET_KEY,
-      { expiresIn: '2h' }
-    );
+        if (!existingUser) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
 
-    user.resetToken = resetToken;
-    user.resetId = crypto.randomBytes(16).toString('hex');
-    await user.save();
+        // Generate reset token and resetId
+        const resetToken = generateSecretToken(existingUser);
+        existingUser.resetToken = resetToken;
 
-    const transporter = nodemailer.createTransport({
-      service: 'Gmail',
-      auth: {
-        user: process.env.EMAIL,
-        pass: process.env.PASSWORD
-      }
-    });
+        try {
+            const resetId = crypto.randomBytes(16).toString('hex');
+            existingUser.resetId = resetId;
+            await existingUser.save();
+        } catch (error) {
+            if (error.code === 11000 && error.keyPattern?.resetId) {
+                // Retry logic for duplicate resetId
+                existingUser.resetId = crypto.randomBytes(16).toString('hex');
+                await existingUser.save();
+            } else {
+                throw error; // Rethrow other errors
+            }
+        }
 
-    await transporter.sendMail({
-      to: user.email,
-      subject: 'Password Reset',
-      text: `Reset link: https://yourdomain.com/reset/${user.resetId}`
-    });
+        // Send the reset email
+        const mailer = nodemailer.createTransport({
+            service: 'Gmail',
+            auth: {
+                user: process.env.EMAIL,
+                pass: process.env.PASSWORD,
+            },
+        });
 
-    res.status(200).json({ message: 'Password reset email sent.' });
-  } catch (error) {
-    console.error('Password reset error:', error);
-    res.status(500).json({ message: 'Server error.', error: error.message });
-  }
+        const resetLink = `https://personalized-learning-dashboard-1.onrender.com/${existingUser.resetId}`;
+        const options = {
+            to: existingUser.email,
+            from: 'no-reply@gmail.com',
+            subject: 'Password Reset',
+            text: `Click the link below to reset your password:\n\n${resetLink}\n\nThis link will expire in 2 hours.`,
+        };
+
+        await mailer.sendMail(options);
+        return res.status(200).json({ message: 'Password reset email sent.' });
+    } catch (error) {
+        console.error('Error during password reset request:', error.message);
+        return res.status(500).json({ message: 'Server error.', error: error.message });
+    }
 };
 
 export const validateResetToken = async (req, res) => {
-  try {
     const { resetId } = req.query;
-    const user = await User.findOne({ resetId });
-    
-    if (!user) return res.status(404).json({ message: 'Invalid reset link.' });
-    
-    res.status(200).json({ resetToken: user.resetToken });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error.', error: error.message });
-  }
+    try {
+        const existingUser = await User.findOne({ resetId });
+
+        if (!existingUser) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        return res.status(200).json(existingUser.resetToken);
+
+    } catch (error) {
+        return res.status(500).json({ message: 'Server error.', error: error.message })
+    }
 };
 
 export const resetPassword = async (req, res) => {
-  try {
     const { newPassword, resetToken } = req.body;
-    
-    const decoded = jwt.verify(resetToken, process.env.JWT_RESET_SECRET_KEY);
-    if (Date.now() >= decoded.exp * 1000) {
-      return res.status(400).json({ message: 'Reset token expired.' });
+    try {
+        // Verify the reset token
+        const decoded = jwt.verify(resetToken, process.env.JWT_RESET_SECRET_KEY);
+        
+        // Check if the token has expired
+        if (Date.now() >= decoded.exp * 1000) {
+            return res.status(400).json({ message: 'Reset token has expired.' });
+        }
+
+        const userId = decoded.id;
+
+        // Find the user associated with the reset token
+        const existingUser = await User.findOne({ _id: userId, resetToken });
+
+        if (!existingUser) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        // Check if the new password is the same as the current one
+        const isSamePassword = await comparePasswords(newPassword, existingUser.password);
+        if (isSamePassword) {
+            return res.status(400).json({ sameMessage: '*New password must be different from the current password.' });
+        }
+
+        // Hash the new password and update it
+        existingUser.password = await hashPassword(newPassword);
+        existingUser.resetToken = undefined;
+        existingUser.resetId = undefined;
+
+        await existingUser.save();
+        return res.status(200).json({ message: 'Password successfully reset.' });
+    } catch (error) {
+        console.error('Error resetting password:', error.message);
+        return res.status(500).json({ message: 'Server error.', error: error.message });
     }
-
-    const user = await User.findOne({
-      _id: decoded.id,
-      resetToken
-    });
-
-    if (!user) return res.status(404).json({ message: 'Invalid token.' });
-
-    if (await comparePasswords(newPassword, user.password)) {
-      return res.status(400).json({ message: 'Use a new password.' });
-    }
-
-    user.password = await hashPassword(newPassword);
-    user.resetToken = undefined;
-    user.resetId = undefined;
-    await user.save();
-
-    res.status(200).json({ message: 'Password reset successful.' });
-  } catch (error) {
-    console.error('Password reset error:', error);
-    res.status(500).json({ message: 'Server error.', error: error.message });
-  }
 };

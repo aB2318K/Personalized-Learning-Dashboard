@@ -6,174 +6,238 @@ import User from '../models/User.js';
 
 // Post-related Controllers
 export const createPost = async (req, res) => {
-  try {
-    const { userId, questionTitle, questionDescription } = req.body;
-
-    if (!userId || !questionTitle || !questionDescription) {
-      return res.status(400).json({ message: 'All fields are required.' });
+    try {
+        const { userId, questionTitle, questionDescription } = req.body;
+    
+        // Validate required fields
+        if (!userId || !questionTitle || !questionDescription) {
+          return res.status(400).json({ message: 'All fields are required.' });
+        }
+    
+        // Create a new post
+        const newQuestion = new Post({
+          title: questionTitle,
+          user: userId,
+          description: questionDescription,
+        });
+    
+        // Save to database
+        const savedQuestion = await newQuestion.save();
+    
+        return res.status(201).json({
+          message: 'Question posted successfully.',
+          question: savedQuestion,
+        });
+      } catch (error) {
+        console.error('Error posting question:', error);
+        return res.status(500).json({ message: 'Internal server error.' });
     }
-
-    const newPost = new Post({
-      title: questionTitle,
-      user: userId,
-      description: questionDescription,
-    });
-
-    const savedPost = await newPost.save();
-    res.status(201).json({
-      message: 'Question posted successfully.',
-      post: savedPost,
-    });
-  } catch (error) {
-    console.error('Post creation error:', error);
-    res.status(500).json({ message: 'Internal server error.' });
-  }
 };
 
 export const getPosts = async (req, res) => {
-  try {
-    const { userId } = req.query;
+    try {
+        const { userId } = req.query;
 
-    if (!userId) return res.status(400).json({ message: 'User ID required.' });
-    
-    const posts = await Post.find({ user: userId })
-      .sort({ createdAt: -1 })
-      .populate('user', 'firstname lastname');
+        if (!userId) {
+            return res.status(400).json({ message: 'User ID is required.' });
+        }
 
-    res.status(200).json({
-      message: posts.length ? 'Posts retrieved successfully.' : 'No posts found.',
-      posts
-    });
-  } catch (error) {
-    console.error('Posts fetch error:', error);
-    res.status(500).json({ message: 'Server error fetching posts.' });
-  }
+        // Fetch user by ID
+        const user = await User.findById(userId);
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        // Fetch posts by user
+        const userPosts = await Post.find({ user: userId }).sort({ createdAt: -1 });
+
+        // If no posts are found
+        if (userPosts.length === 0) {
+            return res.status(200).json({ 
+                message: 'No posts found for this user.', 
+                posts: [] 
+            });
+        }
+
+        // If posts are found
+        return res.status(200).json({ 
+            message: 'Posts retrieved successfully.', 
+            firstName: user.firstname,  
+            lastName: user.lastname,
+            posts: userPosts 
+        });
+    } catch (error) {
+        console.error('Error fetching posts:', error);
+        res.status(500).json({ message: 'Server error. Could not fetch posts.' });
+    }
 };
 
 export const updatePost = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { questionTitle, questionDescription } = req.body;
+    try {
+        const { id } = req.params; 
+        const { questionTitle, questionDescription } = req.body;
 
-    const updatedPost = await Post.findByIdAndUpdate(
-      id,
-      { title: questionTitle, description: questionDescription },
-      { new: true, runValidators: true }
-    );
+        if (!questionTitle || !questionDescription) {
+            return res.status(400).json({ message: 'Title and description are required.' });
+        }
 
-    if (!updatedPost) return res.status(404).json({ message: 'Post not found.' });
-    
-    res.status(200).json({
-      message: 'Post updated successfully.',
-      post: updatedPost
-    });
-  } catch (error) {
-    console.error('Post update error:', error);
-    res.status(500).json({ message: 'Internal server error.' });
-  }
+        const updatedPost = await Post.findByIdAndUpdate(
+            id,
+            { 
+                title: questionTitle, 
+                description: questionDescription 
+            },
+            { new: true, runValidators: true } 
+        );
+
+        if (!updatedPost) {
+            return res.status(404).json({ message: 'Post not found.' });
+        }
+
+        return res.status(200).json({
+            message: 'Post updated successfully.',
+            post: updatedPost,
+        });
+    } catch (error) {
+        console.error('Error updating post:', error);
+        return res.status(500).json({ message: 'Internal server error.' });
+    }
 };
 
 export const deletePost = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const deletedPost = await Post.findByIdAndDelete(id);
+    try {
+        const { id } = req.params;
 
-    if (!deletedPost) return res.status(404).json({ message: 'Post not found.' });
+        // Delete the post (question)
+        const deletedPost = await Post.findByIdAndDelete(id);
 
-    await Notification.deleteMany({ postId: id });
-    res.status(200).json({
-      message: 'Post and notifications deleted.',
-      post: deletedPost
-    });
-  } catch (error) {
-    console.error('Post deletion error:', error);
-    res.status(500).json({ message: 'Internal server error.' });
-  }
+        if (!deletedPost) {
+            return res.status(404).json({ message: 'Post not found.' });
+        }
+
+        // Delete notifications related to this post
+        await Notification.deleteMany({ postId: id });
+
+        return res.status(200).json({
+            message: 'Post and related notifications deleted successfully.',
+            post: deletedPost,
+        });
+    } catch (error) {
+        console.error('Error deleting post and related notifications:', error);
+        return res.status(500).json({ message: 'Internal server error.' });
+    }
 };
 
 export const getAllPosts = async (req, res) => {
-  try {
-    const posts = await Post.find({})
-      .populate('user', 'firstname lastname')
-      .sort({ createdAt: -1 });
+    try {
+        const allPosts = await Post.find({}).populate('user', 'firstname lastname').sort({ createdAt: -1 });
+        // If no posts exist
+        if (allPosts.length === 0) {
+            return res.status(200).json({
+                message: 'No posts found.',
+                posts: [],
+            });
+        }
 
-    res.status(200).json({
-      message: posts.length ? 'All posts retrieved.' : 'No posts available.',
-      posts
-    });
-  } catch (error) {
-    console.error('All posts fetch error:', error);
-    res.status(500).json({ message: 'Server error fetching posts.' });
-  }
+        // If posts exist
+        return res.status(200).json({
+            message: 'All posts retrieved successfully.',
+            posts: allPosts,
+        });
+    } catch (error) {
+        console.error('Error fetching all posts:', error);
+        res.status(500).json({ message: 'Server error. Could not fetch posts.' });
+    }
 };
 
 export const searchPosts = async (req, res) => {
-  try {
     const { q } = req.query;
-    if (!q) return res.status(400).json({ message: 'Search query required.' });
+    if (!q) {
+        return res.status(400).json({ message: 'Search term is required.' });
+    }
 
-    const posts = await Post.find({ title: { $regex: q, $options: 'i' } })
-      .populate('user', 'firstname lastname');
+    try {
+        // Use case-insensitive regex for partial matching
+        const posts = await Post.find({
+            title: { $regex: q, $options: 'i' },
+        }).populate('user', 'firstname lastname');
 
-    res.status(200).json({
-      message: posts.length ? 'Search results found.' : 'No matching posts.',
-      posts
-    });
-  } catch (error) {
-    console.error('Search error:', error);
-    res.status(500).json({ message: 'Server error during search.' });
-  }
+        return res.status(200).json({
+            message: 'Search results fetched successfully.',
+            posts,
+        });
+    } catch (error) {
+        console.error('Error searching posts:', error);
+        return res.status(500).json({ message: 'Server error. Could not fetch search results.' });
+    }
 };
 
 export const getPostDetails = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const post = await Post.findById(id).populate('user', 'firstname lastname');
-    
-    if (!post) return res.status(404).json({ message: 'Post not found.' });
+    try {
+        const { id } = req.params;  
+        // Find the post by ID and populate user information
+        const post = await Post.findById(id).populate('user', 'firstname lastname');
 
-    const answers = await PostAnswer.find({ post: id })
-      .populate('user', 'firstname lastname');
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found.' });
+        }
 
-    res.status(200).json({
-      message: 'Post details retrieved.',
-      post,
-      answers
-    });
-  } catch (error) {
-    console.error('Post details error:', error);
-    res.status(500).json({ message: 'Server error fetching post.' });
-  }
+        // Find all answers associated with the post
+        const answers = await PostAnswer.find({ post: id }).populate('user', 'firstname lastname');
+
+        return res.status(200).json({
+            message: 'Post retrieved successfully.',
+            post: post,
+            answers: answers, // Include the answers in the response
+        });
+    } catch (error) {
+        console.error('Error fetching post by ID:', error);
+        return res.status(500).json({ message: 'Internal server error. Could not fetch post.' });
+    }
 };
 
 // Answer-related Controllers
 export const createAnswer = async (req, res) => {
-  try {
     const { id } = req.params;
     const { answer, userId } = req.body;
 
-    if (!answer) return res.status(400).json({ message: 'Answer content required.' });
+    if (!answer) {
+        return res.status(400).json({ message: 'Answer content is required.' });
+    }
 
-    const newAnswer = new PostAnswer({
-      post: id,
-      user: userId,
-      answer
-    });
+    try {
+        // Verify that the post exists
+        const post = await Post.findById(id);
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found.' });
+        }
 
-    await newAnswer.save();
-    await Post.findByIdAndUpdate(id, { $inc: { answersCount: 1 } });
+        // Create and save the new answer
+        const newAnswer = new PostAnswer({
+            post: id,
+            user: userId,
+            answer,
+        });
 
-    const populatedAnswer = await PostAnswer.findById(newAnswer._id)
-      .populate('user', 'firstname lastname');
+        await newAnswer.save();
 
-    res.status(201).json({
-      message: 'Answer created successfully.',
-      answer: populatedAnswer
-    });
-  } catch (error) {
-    console.error('Answer creation error:', error);
-    res.status(500).json({ message: 'Internal server error.' });
-  }
+        // Increase the post answer count
+        post.answersCount += 1;
+        await post.save();
+
+        // Populate user details in the newly created answer
+        const populatedAnswer = await PostAnswer.findById(newAnswer._id).populate('user', 'firstname lastname');
+
+        // Return the newly created and populated answer
+        res.status(201).json({
+            message: 'Answer created successfully.',
+            answer: populatedAnswer,
+        });
+    } catch (error) {
+        console.error('Error creating answer:', error);
+        res.status(500).json({ message: 'Internal server error.' });
+    }
 };
 
 export const handleVote = async (req, res) => {
@@ -229,93 +293,131 @@ export const handleVote = async (req, res) => {
 };
 
 export const deleteAnswer = async (req, res) => {
-  try {
     const { id } = req.params;
     const { userId } = req.query;
 
-    const answer = await PostAnswer.findById(id);
-    if (!answer) return res.status(404).json({ message: 'Answer not found.' });
+    try {
+        // Find the answer by ID
+        const answer = await PostAnswer.findById(id);
+        if (!answer) {
+            return res.status(404).json({ message: 'Answer not found.' });
+        }
 
-    if (!answer.user.equals(userId)) {
-      return res.status(403).json({ message: 'Unauthorized to delete this answer.' });
+        // Check if the user is the owner of the answer
+        if (answer.user.toString() !== userId) {
+            return res.status(403).json({ message: 'You are not authorized to delete this answer.' });
+        }
+
+        // Delete the notification related to this answer
+        await Notification.findOneAndDelete({ answerId: id });
+
+        // Remove the answer from the database
+        await PostAnswer.findByIdAndDelete(id);
+
+        // Decrease the post's answer count
+        const post = await Post.findById(answer.post);
+        if (post) {
+            post.answersCount -= 1;
+            await post.save();
+        }
+
+        res.status(200).json({ message: 'Answer and its notification deleted successfully.' });
+    } catch (error) {
+        console.error('Error deleting answer:', error);
+        res.status(500).json({ message: 'Internal server error.' });
     }
-
-    await PostAnswer.findByIdAndDelete(id);
-    await Post.findByIdAndUpdate(answer.post, { $inc: { answersCount: -1 } });
-    await Notification.deleteOne({ answerId: id });
-
-    res.status(200).json({ message: 'Answer deleted successfully.' });
-  } catch (error) {
-    console.error('Answer deletion error:', error);
-    res.status(500).json({ message: 'Internal server error.' });
-  }
 };
 
 // Notification Controllers
 export const manageNotification = async (req, res) => {
-  try {
-    const { type, postId, answerId, userId } = req.body;
+    const { userId, type, postId, answerId } = req.body;
 
-    let recipients = [];
-    if (type === 'question') {
-      recipients = await User.find({ _id: { $ne: userId } }).select('_id');
-    } else if (type === 'answer') {
-      const post = await Post.findById(postId);
-      if (!post) return res.status(404).json({ message: 'Post not found.' });
-      if (!post.user.equals(userId)) recipients = [post.user];
+    try {
+        if (type === 'question') {
+            // Find all users except the one who posted the question
+            const usersToNotify = await User.find({ _id: { $ne: userId } }).select('_id');
+            const recipientIds = usersToNotify.map(user => user._id);
+            
+            // Create a single notification with an array of recipients
+            const newNotification = new Notification({
+                type,
+                postId,
+                triggeredBy: userId,
+                recipients: recipientIds, // Save recipients as an array
+            });
+            
+            await newNotification.save();
+
+            return res.status(201).json({ message: 'Notifications for the question are saved.', notification: newNotification });
+        } else if (type === 'answer') {
+            // Find the user who posted the original question
+            const question = await Post.findById(postId).select('user');
+
+            if (!question) {
+                return res.status(404).json({ message: 'Question not found.' });
+            }
+
+            if (question.user.equals(userId)) {
+                return res.status(200).json({ message: 'Answer posted by the question author, no notification needed.' });
+            } else {
+                // Create a single notification for the question's author
+                const newNotification = new Notification({
+                    type,
+                    postId,
+                    answerId,
+                    triggeredBy: userId,
+                    recipients: [question.user], // Save the question author as the only recipient
+                });
+
+                await newNotification.save();
+
+                return res.status(201).json({ message: 'Notification for the answer is saved.', notification: newNotification });
+            }
+        } else {
+            return res.status(400).json({ message: 'Invalid notification type.' });
+        }
+    } catch (error) {
+        console.error('Error saving notification:', error);
+        return res.status(500).json({ message: 'Internal server error.' });
     }
-
-    if (recipients.length > 0) {
-      const notification = new Notification({
-        type,
-        postId,
-        answerId,
-        triggeredBy: userId,
-        recipients: recipients.map(u => u._id)
-      });
-      await notification.save();
-    }
-
-    res.status(201).json({ message: 'Notifications handled successfully.' });
-  } catch (error) {
-    console.error('Notification error:', error);
-    res.status(500).json({ message: 'Internal server error.' });
-  }
 };
 
 export const fetchNotifications = async (req, res) => {
-  try {
     const { userId } = req.query;
-    const notifications = await Notification.find({ recipients: userId })
-      .populate('triggeredBy', 'firstname lastname')
-      .sort({ createdAt: -1 });
+    try {
+        const notifications = await Notification.find({ recipients: userId }) 
+            .populate('triggeredBy', 'firstname lastname') 
+            .sort({ createdAt: -1 });
 
-    res.status(200).json({ notifications });
-  } catch (error) {
-    console.error('Notifications fetch error:', error);
-    res.status(500).json({ message: 'Server error fetching notifications.' });
-  }
+        return res.status(200).json({ notifications });
+    } catch (error) {
+        console.error('Error fetching notifications:', error);
+        return res.status(500).json({ message: 'Internal server error.' });
+    }
 };
 
 export const clearNotification = async (req, res) => {
-  try {
     const { userId, notificationId } = req.body;
-    const notification = await Notification.findByIdAndUpdate(
-      notificationId,
-      { $pull: { recipients: userId } },
-      { new: true }
-    );
+    try {
+        // Update the notification by removing the user from the recipients array
+        const notification = await Notification.findByIdAndUpdate(
+            notificationId,
+            { $pull: { recipients: userId } }, // Remove the userId from the recipients array
+            { new: true } // Return the updated document
+        );
+        if (!notification) {
+            return res.status(404).json({ message: 'Notification not found.' });
+        }
+        // Check if there are any remaining recipients
+        if (notification.recipients.length === 0) {
+            // If no more recipients, delete the notification from the database
+            await Notification.findByIdAndDelete(notificationId);
+            return res.status(200).json({ message: 'Notification cleared and deleted successfully.' });
+        }
 
-    if (!notification) return res.status(404).json({ message: 'Notification not found.' });
-
-    if (notification.recipients.length === 0) {
-      await Notification.findByIdAndDelete(notificationId);
-      return res.status(200).json({ message: 'Notification cleared and deleted.' });
+        return res.status(200).json({ message: 'Notification updated successfully.', notification });
+    } catch (error) {
+        console.error('Error updating notification:', error);
+        return res.status(500).json({ message: 'Internal server error.' });
     }
-
-    res.status(200).json({ message: 'Notification updated.', notification });
-  } catch (error) {
-    console.error('Notification clear error:', error);
-    res.status(500).json({ message: 'Internal server error.' });
-  }
 };
