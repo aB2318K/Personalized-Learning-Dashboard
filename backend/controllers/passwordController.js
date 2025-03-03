@@ -40,7 +40,7 @@ export const requestPasswordReset = async (req, res) => {
             },
         });
 
-        const resetLink = `https://personalized-learning-dashboard-1.onrender.com/${existingUser.resetId}`;
+        const resetLink = `https://personalized-learning-dashboard-1.onrender.com/new-password/${existingUser.resetId}`;
         const options = {
             to: existingUser.email,
             from: 'no-reply@gmail.com',
