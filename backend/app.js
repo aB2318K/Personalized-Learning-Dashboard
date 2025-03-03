@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { HfInference } from '@huggingface/inference';
+import { authenticateToken } from './middleware/authMiddleware.js';
 
 // Configurations
 import connectDB from './config/db.js';
