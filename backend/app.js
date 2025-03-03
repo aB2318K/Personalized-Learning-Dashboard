@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { HfInference } from '@huggingface/inference';
 import { authenticateToken } from './middleware/authMiddleware.js';
 import Goal from './models/Goal.js';
+import User from './models/User.js';
 
 // Configurations
 import connectDB from './config/db.js';
