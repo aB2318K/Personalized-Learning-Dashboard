@@ -177,42 +177,55 @@ export const createAnswer = async (req, res) => {
 };
 
 export const handleVote = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { voteType, userId } = req.body;
+    const { id } = req.params;  
+    const { voteType, userId } = req.body;  
 
-    const answer = await PostAnswer.findById(id);
-    if (!answer) return res.status(404).json({ message: 'Answer not found.' });
-
-    const existingVoteIndex = answer.votes.findIndex(v => v.userId.equals(userId));
-
-    if (existingVoteIndex > -1) {
-      const existingVote = answer.votes[existingVoteIndex];
-      if (existingVote.voteType === voteType) {
-        // Remove vote
-        answer.votes.splice(existingVoteIndex, 1);
-        voteType === 'upvote' ? answer.upvotes-- : answer.downvotes--;
-      } else {
-        // Change vote
-        existingVote.voteType = voteType;
-        voteType === 'upvote' ? (answer.upvotes++, answer.downvotes--) : (answer.downvotes++, answer.upvotes--);
-      }
-    } else {
-      // Add new vote
-      answer.votes.push({ userId, voteType });
-      voteType === 'upvote' ? answer.upvotes++ : answer.downvotes++;
+    if (!['upvote', 'downvote'].includes(voteType)) {
+        return res.status(400).json({ message: 'Invalid vote type.' });
     }
 
-    await answer.save();
-    res.status(200).json({
-      message: 'Vote processed successfully.',
-      upvotes: answer.upvotes,
-      downvotes: answer.downvotes
-    });
-  } catch (error) {
-    console.error('Voting error:', error);
-    res.status(500).json({ message: 'Internal server error.' });
-  }
+    try {
+        // Find the answer by ID
+        const answer = await PostAnswer.findById(id);
+        if (!answer) {
+            return res.status(404).json({ message: 'Answer not found.' });
+        }
+
+        // Check if the user has already voted on this answer
+        const existingVote = answer.votes.find(vote => vote.userId.toString() === userId);
+
+        if (existingVote) {
+            // If the user has voted, update their existing vote
+            if (existingVote.voteType === voteType) {
+                // If the user is trying to vote the same way, remove their vote
+                answer.votes = answer.votes.filter(vote => vote.userId.toString() !== userId);
+                voteType === 'upvote' ? answer.upvotes-- : answer.downvotes--;
+            } else {
+                // If the user is changing their vote, update the vote type
+                existingVote.voteType = voteType;
+                voteType === 'upvote' ? answer.upvotes++ : answer.downvotes++;
+                voteType === 'downvote' ? answer.upvotes-- : answer.downvotes--;
+            }
+        } else {
+            // If the user hasn't voted yet, add their vote
+            answer.votes.push({ userId, voteType });
+            voteType === 'upvote' ? answer.upvotes++ : answer.downvotes++;
+        }
+
+        await answer.save();
+
+        res.status(200).json({
+            message: 'Vote processed successfully.',
+            updatedAnswer: {
+                upvotes: answer.upvotes,
+                downvotes: answer.downvotes,
+                votes: answer.votes,
+            },
+        });
+    } catch (error) {
+        console.error('Error processing vote:', error);
+        res.status(500).json({ message: 'Internal server error.' });
+    }
 };
 
 export const deleteAnswer = async (req, res) => {
