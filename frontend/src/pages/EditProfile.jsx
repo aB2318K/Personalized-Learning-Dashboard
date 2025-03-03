@@ -222,10 +222,10 @@ function EditProfile({ userId, token }) {
                     placeholder="Enter new password"
                     className="mt-1 w-full px-3 py-2 md:px-4 md:py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
                 />
+                {passwordError && <p className="mt-1 error_message text-red-700 text-[10px]">{passwordError}</p>}
                 <label htmlFor="re_new_password" className="block text-sm font-medium text-gray-800 mt-4">
                     Confirm New Password:
-                </label>
-                {passwordError && <p className="mt-1 error_message text-red-700 text-[10px]">{passwordError}</p>}
+                </label>                
                 <input
                     type="password"
                     id="re_new_password"
