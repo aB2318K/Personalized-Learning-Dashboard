@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import User from '../models/User.js';
-import { hashPassword, comparePasswords } from '../utils/helpers.js';
+import { hashPassword, comparePasswords, generateSecretToken } from '../utils/helpers.js';
 
 export const requestPasswordReset = async (req, res) => {
     const { email } = req.body;
